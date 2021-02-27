@@ -1,0 +1,19 @@
+{
+  "name": "temoc-bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "start": "node ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dante-ventura/temoc-bot.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dante-ventura/temoc-bot/issues"
+  },
+  "homepage": "https://github.com/dante-ventura/temoc-bot#readme"
+}
