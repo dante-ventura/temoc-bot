@@ -20,7 +20,8 @@ client.on('message', msg => {
             break
         case '!help':
             //send rich message with bot usages
-            //msg.reply(embed)
+            msg.reply('``Hello! I am Temoc Bot and here are some of my commands:\n!help \t\t See a list of my commands``')
+            //.setColor('#F9752E')
             break
         default:
             break
