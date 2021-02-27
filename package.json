@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/dante-ventura/temoc-bot/issues"
   },
-  "homepage": "https://github.com/dante-ventura/temoc-bot#readme"
+  "homepage": "https://github.com/dante-ventura/temoc-bot#readme",
+  "dependencies": {
+    "discord.js": "^12.5.1"
+  }
 }
