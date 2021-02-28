@@ -218,8 +218,8 @@ client.on('message', msg => {
                 let dueDate = new Date(command[count], command[count + 1]-1, command[count + 2])
                 dueDate.setTime(dueDate.getTime() + 86399000)
                 db.addAssignment(msg.guild.id, assignment, dueDate, (err, res) => {
-                    if (err && err.code == 23505)
-                        msg.reply('there is already an assignment with the same name.')
+                    if (err)
+                        msg.reply(`there was an issue adding '${assignment}'`)
                     else if (!err)
                         msg.reply(`succesfully added assignment '${assignment}'.`)
                 })

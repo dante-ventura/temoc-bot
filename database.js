@@ -33,8 +33,7 @@ class db {
     addAssignment(guildId, name, date, callback) {
         this.client.query(`INSERT INTO assignments VALUES (${guildId}, '${name}', ${date.getTime()});`, (err, res) => {
             if (err) {
-                if (err.code != 23505)
-                    console.error(err)
+                console.error(err)
                 callback(err)
             }
             else
@@ -76,7 +75,7 @@ class db {
         this.client.query(`SELECT days, time FROM classes WHERE guild_id=${guildId}`, (err, res) => {
             if (err)
                 console.error(err)
-            else
+            else if (res.rowCount > 0)
                 callback(res.rows[0])
         })
     }
