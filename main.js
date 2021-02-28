@@ -124,12 +124,16 @@ client.on('message', msg => {
             //send rich message with bot usages
             const msgEmbed = new Discord.MessageEmbed()
                 .setColor('#e87500')
-                .setTitle('~TemocBot Help Menu~')
-                .setDescription('Hello! I am TemocBot and here are some of my commands:\n')
+                .setAuthor('TemocBot', 'https://www.utdallas.edu/about/files/temoc.png')
+                .setTitle('~How to use TemocBot~')
+                .setDescription('Useful Commands...\n')
                 .addFields(
-                    { name: '\u200B', value: '\u200B'}, 
-                    { name: 'Commands:', value: '!help\n!add-due-date', inline: true },
-                    { name: 'Description:', value: 'See information about the commands\nAdd an assignment to the alert system (\"name of assignment\" yyyy mm dd)', inline: true },
+                   // { name: '\u200B', value: '\u200B'}, 
+                    { name: '!help:', value: 'See information about the commands' },
+                    { name: '!change-pronouns:', value: 'Select a new pronoun', inline: true},
+                    { name: '!assignments:', value: 'Retrieve deadline information for upcoming assignments'},
+                    { name: '(not for students) !add-assignment:', value: 'Add an assignment deadline(\"assignment_name\" yyyy mm dd)', inline: true},
+                    { name: '(not for students) !remove-assignment \"assignment_name\":', value: 'remove an assignment deadline from list'}
                     )
                 .setThumbnail('https://www.utdallas.edu/about/files/temoc.png')
                 msg.reply(msgEmbed)
