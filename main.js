@@ -113,7 +113,6 @@ client.on('message', msg => {
         }
     }
 
-
     //var command = msg.content.split(' ')
     //return command[] = {!stuff, parameter}
 
@@ -140,7 +139,19 @@ client.on('message', msg => {
                 var assignment = (msg.content.match(/\"(.*?)\"/))[1]
                 var count = 1 + assignment.split(' ').length
                 dueDate = new Date(command[count], command[count + 1], command[count + 2])
-            default:
+            case '!change-pronouns' :
+                let role = msg.guild.roles.cache.find(role => role.name === command[1])
+                if (role) {
+                    msg.member.roles.cache.forEach((role) => {
+                        if (Object.values(roles).includes(role.name)) {
+                            msg.member.roles.remove(role)
+                        }
+                    })
+                    msg.member.roles.add(role)
+                }
+
+
+                default:
             break
     }
 })
