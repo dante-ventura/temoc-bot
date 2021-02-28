@@ -203,9 +203,10 @@ client.on('message', msg => {
                        // { name: '\u200B', value: '\u200B'}, 
                         { name: '!help:', value: 'See information about the commands' },
                         { name: '!change-pronouns:', value: 'Select a new pronoun', inline: true},
-                        { name: '!assignments:', value: 'Retrieve deadline information for upcoming assignments'},
-                        { name: '(not for students) !add-assignment:', value: 'Add an assignment deadline(\"assignment_name\" yyyy mm dd)', inline: true},
-                        { name: '(not for students) !remove-assignment \"assignment_name\":', value: 'remove an assignment deadline from list'}
+                        { name: '(not for students) !add-lecture:', value: 'Set up alerts for live lectures, ex. [M,W,F] 9:30AM'},
+                        { name: '!assignments:', value: 'Retrieve deadline information for upcoming assignments', inline: true},
+                        { name: '(not for students) !add-assignment:', value: 'Add an assignment deadline(\"assignment_name\" yyyy mm dd)'}, 
+                        { name: '(not for students) !remove-assignment \"assignment_name\":', value: 'Remove an assignment deadline from list'}
                         )
                     .setThumbnail('https://www.utdallas.edu/about/files/temoc.png')
                    msg.reply(msgEmbed)
