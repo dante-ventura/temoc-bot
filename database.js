@@ -2,10 +2,10 @@ const { Client } = require('pg')
 const fs = require('fs')
 
 var config = {
-    user: 'dante',
-    password: 'cockroachxutd',
-    host: 'free-tier.gcp-us-central1.cockroachlabs.cloud',
-    database: 'canine-dingo-999.defaultdb',
+    user: 'user',
+    password: 'password',
+    host: 'host',
+    database: 'db',
     port: 26257,
     ssl: {
         ca: fs.readFileSync('./cc-ca.crt')

@@ -1,9 +1,10 @@
 const Discord = require('discord.js')
 const client = new Discord.Client({ partials: ['MESSAGE', 'CHANNEL', 'REACTION'] })
 const CockroachDB = require('./database')
+const { monitor } = require('./monitor')
+const { convertTo12Hour, convertTo24Hour } = require('./utils')
 
 const monitorTimeout = 30000
-const days = ['s', 'm', 't', 'w', 'th', 'f', 'sat']
 
 let db = new CockroachDB()
 
@@ -67,70 +68,12 @@ client.on('messageReactionRemove', async (reaction, user) => {
     }
 })
 
-function monitor(server) {
-    if (server) {
-        let notifChannel = server.channels.cache.find(chnl => chnl.name == 'alert-notifs')
-
-        if (notifChannel) {
-            let date = new Date()
-            let currentDay = days[date.getDay()]
-            db.getLecture(server.id, (lecture) => {
-                if (lecture.days.includes(currentDay)) {
-                    let lectureTime = lecture.time.split(':')
-                    let timeLeft = ((parseInt(lectureTime[0]) * 60) + (parseInt(lectureTime[1]))) - ((date.getHours() * 60) + (date.getMinutes()) + (date.getSeconds() / 60))
-                    
-                    if (timeLeft <= 10.5 && timeLeft > 10) {
-                        const alertEmbed = new Discord.MessageEmbed()
-                        .setColor('FF3300')
-                        .setTitle('~Lecture Alert~')
-                        .setDescription('This lecture starts in 10 minutes, please join soon.')
-
-                        notifChannel.send(alertEmbed)
-                    }
-                        
-                }
-            })
-
-            let now = Date.now()
-            db.getAssignments(server.id, (assignments) => {
-                assignments.forEach(assignment => {
-                    let timeLeft = assignment.due_date - now
-                    const alertEmbed = new Discord.MessageEmbed()
-                        .setColor('FF3300')
-                        .setTitle('~Upcoming Deadline~')
-                    
-                    if (timeLeft <= (2.592e+8 + monitorTimeout) && timeLeft > 2.592e+8) {
-                        alertEmbed.addField(assignment.name, 'Due in 3 days.')
-                        notifChannel.send(alertEmbed)
-                    }
-                    else if (timeLeft <= (8.64e+7 + monitorTimeout) && timeLeft > 8.64e+7) {
-                        alertEmbed.addField(assignment.name, 'Due in 1 day.')
-                        notifChannel.send(alertEmbed)
-                    }
-                    else if (timeLeft <= (4.32e+7 + monitorTimeout) && timeLeft > 4.32e+7) {
-                        alertEmbed.addField(assignment.name, 'Due in 12 hours!')
-                        notifChannel.send(alertEmbed)
-                    }
-                    else if (timeLeft <= (2.16e+7 + monitorTimeout) && timeLeft > 2.16e+7) {
-                        alertEmbed.addField(assignment.name, 'Due in 6 hours!!')
-                        notifChannel.send(alertEmbed)
-                    }
-                    else if (timeLeft <= (3.6e+6 + monitorTimeout) && timeLeft > 3.6e+6) {
-                        alertEmbed.addField(assignment.name, 'Due in 1 hour!!!')
-                        notifChannel.send(alertEmbed)
-                    }
-                })
-            })
-        }
-    }
-}
-
 client.on('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`)
     client.guilds.cache.forEach(async (server) => {
         try {
-            monitor(server)
-            setInterval(monitor, monitorTimeout, server)
+            monitor(db, server)
+            setInterval(monitor, monitorTimeout, db, server)
 
             let welcomeChannel = server.channels.cache.find(chnl => chnl.name === 'welcome' && chnl.type === 'text')
 
@@ -159,7 +102,6 @@ client.on('ready', () => {
         }
     })
 })
-
 
 client.on('message', msg => {
     //command: !setup
@@ -215,14 +157,27 @@ client.on('message', msg => {
             case '!add-assignment' :
                 let assignment = (msg.content.match(/\"(.*?)\"/))[1]
                 let count = 1 + assignment.split(' ').length
-                let dueDate = new Date(command[count], command[count + 1]-1, command[count + 2])
-                dueDate.setTime(dueDate.getTime() + 86399000)
-                db.addAssignment(msg.guild.id, assignment, dueDate, (err, res) => {
-                    if (err)
-                        msg.reply(`there was an issue adding '${assignment}'`)
-                    else if (!err)
-                        msg.reply(`succesfully added assignment '${assignment}'.`)
-                })
+                
+                if (command[count] == 'alert') {
+                    let notifChannel = msg.guild.channels.cache.find(chnl => chnl.name == 'alert-notifs')
+
+                    const alertEmbed = new Discord.MessageEmbed()
+                    .setColor('FF3300')
+                    .setTitle('~Upcoming Deadline~')
+                    .addField(assignment, 'Due in 12 hours!')
+
+                    notifChannel.send(alertEmbed)
+                }
+                else {
+                    let dueDate = new Date(command[count], command[count + 1]-1, command[count + 2])
+                    dueDate.setTime(dueDate.getTime() + 86399000)
+                    db.addAssignment(msg.guild.id, assignment, dueDate, (err, res) => {
+                        if (err)
+                            msg.reply(`there was an issue adding '${assignment}'`)
+                        else if (!err)
+                            msg.reply(`succesfully added assignment '${assignment}'.`)
+                    })
+                }
                 break
 
             case '!remove-assignment' :
@@ -270,12 +225,31 @@ client.on('message', msg => {
                 break
 
             case '!set-lecture':
-                let days = command[1].substr(1, command[1].length-2).split(',')
-                db.addLecture(msg.guild.id, days, convertTo24Hour(command[2]), (err, res) => {
-                    if (err)
-                        msg.reply('there was an issue setting the lecture, please try again.')
-                    else
-                        msg.reply('succesfully added the lecture date, students will now be notified before going live.')
+                //added to easily display the alert system
+                if (command[2] == 'alert') {
+                    let notifChannel = msg.guild.channels.cache.find(chnl => chnl.name == 'alert-notifs')
+
+                    const alertEmbed = new Discord.MessageEmbed()
+                    .setColor('FF3300')
+                    .setTitle('~Lecture Alert~')
+                    .setDescription('This lecture starts in 10 minutes, please join soon.')
+                    
+                    notifChannel.send(alertEmbed)
+                }
+                else {
+                    let days = command[1].substr(1, command[1].length-2).split(',')
+                    db.addLecture(msg.guild.id, days, convertTo24Hour(command[2]), (err, res) => {
+                        if (err)
+                            msg.reply('there was an issue setting the lecture, please try again.')
+                        else
+                            msg.reply('succesfully added the lecture date, students will now be notified before going live.')
+                    })
+                }
+                break
+            
+            case '!lecture':
+                db.getLecture(msg.guild.id, (lecture) => {
+                    msg.reply(`This lecture is on ${lecture.days.join('/')} at ${convertTo12Hour(lecture.time)}`)
                 })
                 break
 
@@ -285,15 +259,8 @@ client.on('message', msg => {
     }
 })
 
-function convertTo24Hour(time) {
-    var hours = parseInt((time.split(':'))[0]);
-    if(time.indexOf('am') != -1 && hours == 12) {
-        time = time.replace('12', '0');
-    }
-    if(time.indexOf('pm')  != -1 && hours < 12) {
-        time = time.replace(hours, (hours + 12));
-    }
-    return time.replace(/(am|pm)/, '') + ':00';
-}
-
 client.login('TOKEN')
+
+module.exports = {
+    monitorTimeout
+}
