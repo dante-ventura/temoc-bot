@@ -146,6 +146,7 @@ client.on('message', msg => {
                         { name: '!help:', value: 'See information about the commands' },
                         { name: '!change-pronouns:', value: 'Select a new pronoun'},
                         { name: '!assignments:', value: 'Retrieve deadline information for upcoming assignments'},
+                        { name: '!lecture:', value: 'Retrieve information for lecture date and time'},
                         { name: '(not for students) !add-assignment:', value: 'Add an assignment deadline(\"assignment_name\" yyyy mm dd)'}, 
                         { name: '(not for students) !remove-assignment \"assignment_name\":', value: 'Remove an assignment deadline from list'},
                         { name: '(not for students) !set-lecture:', value: 'Set up alerts for live lectures, ex. [m,w,f] 9:30am'},

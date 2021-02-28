@@ -3,7 +3,7 @@ const fs = require('fs')
 
 var config = {
     user: 'user',
-    password: 'password',
+    password: 'pass',
     host: 'host',
     database: 'db',
     port: 26257,
