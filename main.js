@@ -2,6 +2,8 @@ const Discord = require('discord.js')
 const client = new Discord.Client({ partials: ['MESSAGE', 'CHANNEL', 'REACTION'] })
 const CockroachDB = require('./database')
 
+const monitorTimeout = 30000
+
 let db = new CockroachDB()
 
 let welcomeChannels = {
@@ -64,10 +66,38 @@ client.on('messageReactionRemove', async (reaction, user) => {
     }
 })
 
+function monitorAssignments(server) {
+    if (server) {
+        let notifChannel = server.channels.cache.find(chnl => chnl.name == 'alert-notifs')
+
+        if (notifChannel) {
+            let now = Date.now()
+            db.getAssignments(server.id, (assignments) => {
+                assignments.forEach(assignment => {
+                    console.log(timeLeft)
+                    let timeLeft = assignment.due_date - now
+                    if (timeLeft <= (2.592e+8 + monitorTimeout) && timeLeft > 2.592e+8)
+                        notifChannel.send(`There are 3 days left before ${assignment.name} is due.`)
+                    else if (timeLeft <= (8.64e+7 + monitorTimeout) && timeLeft > 8.64e+7)
+                        notifChannel.send(`There is 1 day left before ${assignment.name} is due.`)
+                    else if (timeLeft <= (4.32e+7 + monitorTimeout) && timeLeft > 4.32e+7)
+                        notifChannel.send(`There are 12 hours left before ${assignment.name} is due!`)
+                    else if (timeLeft <= (2.16e+7 + monitorTimeout) && timeLeft > 2.16e+7)
+                        notifChannel.send(`There are 6 hours left before ${assignment.name} is due!!`)
+                    else if (timeLeft <= (3.6e+6 + monitorTimeout) && timeLeft > 3.6e+6)
+                        notifChannel.send(`There is 1 hour left before ${assignment.name} is due!!!`)
+                })
+            })
+        }
+    }
+}
+
 client.on('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`)
     client.guilds.cache.forEach(async (server) => {
         try {
+            setInterval(monitorAssignments, monitorTimeout, server)
+
             let welcomeChannel = server.channels.cache.find(chnl => chnl.name === 'welcome' && chnl.type === 'text')
 
             if (welcomeChannel) {
@@ -114,7 +144,6 @@ client.on('message', msg => {
         }
     }
 
-
     //var command = msg.content.split(' ')
     //return command[] = {!stuff, parameter}
 
@@ -157,6 +186,7 @@ client.on('message', msg => {
                 let assignment = (msg.content.match(/\"(.*?)\"/))[1]
                 let count = 1 + assignment.split(' ').length
                 let dueDate = new Date(command[count], command[count + 1], command[count + 2])
+                dueDate.setTime(dueDate.getTime() + 86399000)
                 db.addAssignment(msg.guild.id, assignment, dueDate, (err, res) => {
                     if (err && err.code == 23505)
                         msg.reply('there is already an assignment with the same name.')
@@ -196,6 +226,17 @@ client.on('message', msg => {
                         msg.reply('there are no assignments added yet!')
                 })
                 break
+
+            case '!change-pronouns' :
+                let role = msg.guild.roles.cache.find(role => role.name === command[1])
+                if (role) {
+                    msg.member.roles.cache.forEach((role) => {
+                        if (Object.values(roles).includes(role.name)) {
+                            msg.member.roles.remove(role)
+                        }
+                    })
+                    msg.member.roles.add(role)
+                }
 
             default:
                 break
