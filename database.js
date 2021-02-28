@@ -52,6 +52,34 @@ class db {
                 callback(null, res)
         })
     }
+
+    addLecture(guildId, days, time, callback) {
+        this.client.query(`DELETE FROM classes WHERE guild_id=${guildId};`, (err, res) => {
+            if (err) {
+                console.error(err)
+                callback(err)
+            }
+            else {
+                this.client.query(`INSERT INTO classes VALUES (${guildId}, ARRAY['${(days.join("','")).toLowerCase()}'], TIME '${time}');`, (err, res) => {
+                    if (err) {
+                        console.error(err)
+                        callback(err)
+                    }
+                    else
+                        callback(null, res)
+                })
+            }
+        })
+    }
+
+    getLecture(guildId, callback) {
+        this.client.query(`SELECT days, time FROM classes WHERE guild_id=${guildId}`, (err, res) => {
+            if (err)
+                console.error(err)
+            else
+                callback(res.rows[0])
+        })
+    }
 }
 
 module.exports = db
