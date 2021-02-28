@@ -1,9 +1,12 @@
 const Discord = require('discord.js')
 const client = new Discord.Client({ partials: ['MESSAGE', 'CHANNEL', 'REACTION'] })
+const CockroachDB = require('./database')
 
-let reactRoles = {
+let db = new CockroachDB()
+
+let welcomeChannels = {
     //template vvv
-    'guildId': 'messageId',
+    'guildId': 'channelId',
 }
 
 let roles = {
@@ -27,7 +30,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
 
     const guild = reaction.message.guild
 
-    if (reactRoles[guild.id] === reaction.message.id) {
+    if (welcomeChannels[guild.id] === reaction.message.channel.id) {
         if (roles[reaction.emoji.name]) {            
             const member = await guild.members.fetch(user.id)
             const role = await guild.roles.cache.find(role => role.name === roles[reaction.emoji.name])
@@ -50,7 +53,7 @@ client.on('messageReactionRemove', async (reaction, user) => {
 
     const guild = reaction.message.guild
 
-    if (reactRoles[guild.id] === reaction.message.id) {
+    if (welcomeChannels[guild.id] === reaction.message.channel.id) {
         if (roles[reaction.emoji.name]) {            
             const member = await guild.members.fetch(user.id)
             const role = await guild.roles.cache.find(role => role.name === roles[reaction.emoji.name])
@@ -70,6 +73,8 @@ client.on('ready', () => {
             if (welcomeChannel) {
                 let messages = await welcomeChannel.messages.fetch({ limit: 1 })
                 let lastMsg = messages.first()
+
+                welcomeChannels[server.id] = welcomeChannel.id
     
                 if (!lastMsg || !lastMsg.author.bot) {
                     let roleEmbed = new Discord.MessageEmbed({
@@ -84,11 +89,7 @@ client.on('ready', () => {
                     await msg.react('4️⃣')
                     await msg.react('5️⃣')
                     await msg.react('6️⃣')
-
-                    reactRoles[server.id] = msg.id
                 }         
-                else if (lastMsg.author.bot)
-                    reactRoles[server.id] = lastMsg.id
             }
         } catch(err) {
             console.error(err)
@@ -116,29 +117,84 @@ client.on('message', msg => {
     //var command = msg.content.split(' ')
     //return command[] = {!stuff, parameter}
 
-    switch (command[0]) {
-        case '!setup':
-            break
-        case '!help':
-            //send rich message with bot usages
-            const msgEmbed = new Discord.MessageEmbed()
-                .setColor('#e87500')
-                .setTitle('~TemocBot Help Menu~')
-                .setDescription('Hello! I am TemocBot and here are some of my commands:\n')
-                .addFields(
-                    { name: '\u200B', value: '\u200B'}, 
-                    { name: 'Commands:', value: '!help\n!add-due-date', inline: true },
-                    { name: 'Description:', value: 'See information about the commands\nAdd an assignment to the alert system (\"name of assignment\" yyyy mm dd)', inline: true },
-                    )
-                .setThumbnail('https://www.utdallas.edu/about/files/temoc.png')
-                msg.reply(msgEmbed)
-            break
-        //string is the name of the assignment
-        //"homework about this" 2021 02 27
-            case '!add-due-date' :
-                var assignment = (msg.content.match(/\"(.*?)\"/))[1]
-                var count = 1 + assignment.split(' ').length
-                dueDate = new Date(command[count], command[count + 1], command[count + 2])
+    if (welcomeChannels[msg.guild.id] === msg.channel.id) {
+        msg.member.setNickname(msg.content)
+        .then(() => {
+            msg.delete() 
+
+            let studentRole = msg.guild.roles.cache.find(role => role.name === 'Student')
+            msg.member.roles.add(studentRole)
+        })
+        .catch(console.error)
+    }
+    else {
+        switch (command[0]) {
+            case '!setup':
+                break
+
+            case '!help':
+                //send rich message with bot usages
+                const msgEmbed = new Discord.MessageEmbed()
+                    .setColor('#e87500')
+                    .setAuthor('TemocBot', 'https://www.utdallas.edu/about/files/temoc.png')
+                    .setTitle('~How to use TemocBot~')
+                    .setDescription('Useful Commands...\n')
+                    .addFields(
+                       // { name: '\u200B', value: '\u200B'}, 
+                        { name: '!help:', value: 'See information about the commands' },
+                        { name: '!change-pronouns:', value: 'Select a new pronoun', inline: true},
+                        { name: '!assignments:', value: 'Retrieve deadline information for upcoming assignments'},
+                        { name: '(not for students) !add-assignment:', value: 'Add an assignment deadline(\"assignment_name\" yyyy mm dd)', inline: true},
+                        { name: '(not for students) !remove-assignment \"assignment_name\":', value: 'remove an assignment deadline from list'}
+                        )
+                    .setThumbnail('https://www.utdallas.edu/about/files/temoc.png')
+                   msg.reply(msgEmbed)
+                break
+
+            case '!add-assignment' :
+                let assignment = (msg.content.match(/\"(.*?)\"/))[1]
+                let count = 1 + assignment.split(' ').length
+                let dueDate = new Date(command[count], command[count + 1], command[count + 2])
+                db.addAssignment(msg.guild.id, assignment, dueDate, (err, res) => {
+                    if (err && err.code == 23505)
+                        msg.reply('there is already an assignment with the same name.')
+                    else if (!err)
+                        msg.reply(`succesfully added assignment '${assignment}'.`)
+                })
+                break
+
+            case '!remove-assignment' :
+                let name = (msg.content.match(/\"(.*?)\"/))[1]
+                db.removeAssignment(msg.guild.id, name, (err, res) => {
+                    if (err)
+                        msg.reply('there was an issue removing this assignment, please try again.')
+                    else if (res.rowCount == 0) 
+                        msg.reply(`there was no assignment named '${name}', nothing was removed.`)
+                    else 
+                        msg.reply(`succesfully removed the assignment '${name}'.`)    
+                })
+                break    
+            
+            case '!assignments':
+                db.getAssignments(msg.guild.id, (assignments) => {
+                    if (assignments.length > 0) {
+                        let assignmentFields = []
+                        assignments.forEach(a => {
+                            let date = new Date(Number(a.due_date))
+                            assignmentFields.push({ name: a.name, value: `Due: ${date.getMonth()}/${date.getDate()}/${date.getFullYear()}`, inline: true })
+                        })
+                        let assignmentEmbed = new Discord.MessageEmbed({
+                            color: '#e87500',
+                            title: 'Assignment List',
+                            fields: assignmentFields
+                        })
+                        msg.reply(assignmentEmbed)
+                    }
+                    else
+                        msg.reply('there are no assignments added yet!')
+                })
+                break
+
             case '!change-pronouns' :
                 let role = msg.guild.roles.cache.find(role => role.name === command[1])
                 if (role) {
@@ -150,9 +206,9 @@ client.on('message', msg => {
                     msg.member.roles.add(role)
                 }
 
-
-                default:
-            break
+            default:
+                break
+        }
     }
 })
 
