@@ -296,4 +296,4 @@ function convertTo24Hour(time) {
     return time.replace(/(am|pm)/, '') + ':00';
 }
 
-client.login('ODE1MjkwNDg3ODc1NDM2NTc2.YDqQbw.M8jUAUhHMHOT2rZ0M2aMt7fl_GY')
+client.login('TOKEN')
