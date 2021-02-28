@@ -1,31 +1,97 @@
 const Discord = require('discord.js')
-const client = new Discord.Client()
+const client = new Discord.Client({ partials: ['MESSAGE', 'CHANNEL', 'REACTION'] })
+
+let reactRoles = {
+    //template vvv
+    'guildId': 'messageId',
+}
+
+let roles = {
+    '1️⃣': 'she/her',
+    '2️⃣': 'he/him',
+    '3️⃣': 'they/them',
+    '4️⃣': 'they/she',
+    '5️⃣': 'they/him',
+    '6️⃣': 'any'
+}
+
+client.on('messageReactionAdd', async (reaction, user) => {
+	if (reaction.partial) {
+		try {
+			await reaction.fetch()
+		} catch (error) {
+			console.error('Something went wrong when fetching the message: ', error)
+			return
+		}
+	}
+
+    const guild = reaction.message.guild
+
+    if (reactRoles[guild.id] === reaction.message.id) {
+        if (roles[reaction.emoji.name]) {            
+            const member = await guild.members.fetch(user.id)
+            const role = await guild.roles.cache.find(role => role.name === roles[reaction.emoji.name])
+
+            if (role)
+                await member.roles.add(role)
+        }
+    }
+})
+
+client.on('messageReactionRemove', async (reaction, user) => {
+    if (reaction.partial) {
+		try {
+			await reaction.fetch()
+		} catch (error) {
+			console.error('Something went wrong when fetching the message: ', error)
+			return
+		}
+	}
+
+    const guild = reaction.message.guild
+
+    if (reactRoles[guild.id] === reaction.message.id) {
+        if (roles[reaction.emoji.name]) {            
+            const member = await guild.members.fetch(user.id)
+            const role = await guild.roles.cache.find(role => role.name === roles[reaction.emoji.name])
+
+            if (role)
+                await member.roles.remove(role)
+        }
+    }
+})
 
 client.on('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`)
-    client.guilds.cache.forEach(server => {
-        let welcomeChannel = server.channels.cache.find(chnl => chnl.name === 'welcome' && chnl.type === 'text')
+    client.guilds.cache.forEach(async (server) => {
+        try {
+            let welcomeChannel = server.channels.cache.find(chnl => chnl.name === 'welcome' && chnl.type === 'text')
 
-        if (welcomeChannel) {
-            welcomeChannel.messages.fetch({ limit: 1 })
-            .then(messages => {
+            if (welcomeChannel) {
+                let messages = await welcomeChannel.messages.fetch({ limit: 1 })
                 let lastMsg = messages.first()
-
-                if (!lastMsg.author.bot) {
+    
+                if (!lastMsg || !lastMsg.author.bot) {
                     let roleEmbed = new Discord.MessageEmbed({
                         color: '#e87500',
-                        description: 'Hello! Before you can view the server, you need to enter your name and select your pronouns. Please type your name and then react to your preferred pronouns.\n:one: - she/her\n:two: - he/him\n:three: - they/them\n:four: - they/she\n:five: - they/him\n:six: - any',
+                        description: 'Hello! Before you can view the server, you need to enter your name and select your pronouns. Please type your name and then react to your preferred pronouns.\n\n:one: - she/her\n:two: - he/him\n:three: - they/them\n:four: - they/she\n:five: - they/him\n:six: - any',
                         
                     })
-                    welcomeChannel.send(roleEmbed)
-                    .then(msg => {
-                        //msg.react()
-                    }).catch(console.error)
-                }         
-                else
-                    console.log('bad')
+                    let msg = await welcomeChannel.send(roleEmbed)
+                    await msg.react('1️⃣')
+                    await msg.react('2️⃣')
+                    await msg.react('3️⃣')
+                    await msg.react('4️⃣')
+                    await msg.react('5️⃣')
+                    await msg.react('6️⃣')
 
-            }).catch(console.error)
+                    reactRoles[server.id] = msg.id
+                }         
+                else if (lastMsg.author.bot)
+                    reactRoles[server.id] = lastMsg.id
+            }
+        } catch(err) {
+            console.error(err)
         }
     })
 })
@@ -56,8 +122,17 @@ client.on('message', msg => {
             break
         case '!help':
             //send rich message with bot usages
-            msg.reply('``Hello! I am Temoc Bot and here are some of my commands:\n!help \t\t See a list of my commands``')
-            //.setColor('#F9752E')
+            const msgEmbed = new Discord.MessageEmbed()
+                .setColor('#e87500')
+                .setTitle('~TemocBot Help Menu~')
+                .setDescription('Hello! I am TemocBot and here are some of my commands:\n')
+                .addFields(
+                    { name: '\u200B', value: '\u200B'}, 
+                    { name: 'Commands:', value: '!help\n!add-due-date', inline: true },
+                    { name: 'Description:', value: 'See information about the commands\nAdd an assignment to the alert system (\"name of assignment\" yyyy mm dd)', inline: true },
+                    )
+                .setThumbnail('https://www.utdallas.edu/about/files/temoc.png')
+                msg.reply(msgEmbed)
             break
         //string is the name of the assignment
         //"homework about this" 2021 02 27
